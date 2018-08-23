@@ -60,6 +60,7 @@ public class DelegatingPersistenceManager implements PersistenceManager
 		return pmWrapped.exists(pid);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Dictionary load(String pid) throws IOException
 	{
@@ -132,6 +133,7 @@ public class DelegatingPersistenceManager implements PersistenceManager
 		}
 	}
 	
+	@SuppressWarnings("unchecked")
 	private static void bootstrap(
 			PersistenceManager source,
 			PersistenceManager destination,
@@ -193,6 +195,7 @@ public class DelegatingPersistenceManager implements PersistenceManager
 			failedCount);
 	}
 	
+	@SuppressWarnings("unchecked")
 	private static Dictionary copyProperties(Dictionary source, Predicate<Object> excludeIf)
 	{
 		Dictionary destination = new Hashtable();
