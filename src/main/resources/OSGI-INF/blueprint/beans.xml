@@ -1,0 +1,75 @@
+<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+	xsi:schemaLocation="
+	  http://www.osgi.org/xmlns/blueprint/v1.0.0 
+	  	http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+	  http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 
+	  	http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd
+	  ">
+	  
+	<cm:property-placeholder id="config" persistent-id="felix-cm-jdbc" update-strategy="reload">
+		<cm:default-properties>
+			<cm:property name="serviceRanking" value="2"/>
+			<cm:property name="pidFilter.type" value="REGEX"/>
+			<cm:property name="pidFilter.arg" value=".+"/>
+			<cm:property name="bootstrapMode" value="SYNC_FROM_WRAPPED"/>
+			<cm:property name="persistToWrappedPersistenceManager" value="true"/>
+			
+			<cm:property name="jdbc.datasourceFilter" value="(databaseName=)"/>
+			<cm:property name="jdbc.tableNameSettings" value="KarafSettings"/>
+			<cm:property name="jdbc.columnNamePid" value="Pid"/>
+			<cm:property name="jdbc.columnNameProperty" value="Property"/>
+			<cm:property name="jdbc.columnNameValue" value="Value"/>
+		</cm:default-properties>
+	</cm:property-placeholder>
+	  
+	<reference id="wrappedPersistenceManager" interface="org.apache.felix.cm.PersistenceManager" 
+		filter="(!(objectClass=com.greysphere.internal.cm.DelegatingPersistenceManager))" />
+	
+	<bean id="datasource" class="com.greysphere.internal.cm.OsgiFilteringDatasourceProxy">
+		<argument ref="blueprintBundleContext"/>
+		<argument value="${jdbc.datasourceFilter}"/>
+	</bean>
+	
+	<bean id="jdbcPersistenceManager" class="com.greysphere.internal.cm.JdbcPersistenceManager">
+		<argument ref="datasource"/>
+		<argument value="${jdbc.tableNameSettings}"/>
+		<argument value="${jdbc.columnNamePid}"/>
+		<argument value="${jdbc.columnNameProperty}"/>
+		<argument value="${jdbc.columnNameValue}"/>
+		<!-- <argument>
+			<bean class="com.greysphere.internal.cm.PrefixStripFunction">
+				<argument value="${supportedPidPrefix}"/>
+			</bean>
+		</argument>
+		<argument>
+			<bean class="com.greysphere.internal.cm.PrefixAddFunction">
+				<argument value="${supportedPidPrefix}"/>
+			</bean>
+		</argument> -->
+	</bean>
+	
+	<bean id="pidFilter" class="com.greysphere.internal.cm.ServicePidFilterFactory" factory-method="create">
+		<argument value="${pidFilter.type}"/>
+		<argument value="${pidFilter.arg}"/>
+	</bean>
+	
+	<bean id="bootstrapMode" class="java.lang.Enum" factory-method="valueOf">
+		<argument value="com.greysphere.internal.cm.BootstrapMode" />
+		<argument value="${bootstrapMode}"/>
+	</bean>
+	
+	<bean id="delegatingPersistenceManager" class="com.greysphere.internal.cm.DelegatingPersistenceManager" 
+			init-method="init">
+		<argument ref="jdbcPersistenceManager"/>
+		<argument ref="wrappedPersistenceManager"/>
+		<!-- <argument ref="pidFilter"/> -->
+		<argument value="${persistToWrappedPersistenceManager}"/>
+		<argument ref="bootstrapMode"/>
+	</bean>
+	
+	<service id="persistenceManagerService" ref="delegatingPersistenceManager" 
+		interface="org.apache.felix.cm.PersistenceManager" ranking="${serviceRanking}"/>
+	
+</blueprint>
