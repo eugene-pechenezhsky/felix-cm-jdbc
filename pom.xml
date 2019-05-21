@@ -66,6 +66,24 @@
 			<version>21.0</version>
 			<type>bundle</type>
 		</dependency>
+		<dependency>
+		    <groupId>junit</groupId>
+		    <artifactId>junit</artifactId>
+		    <version>4.12</version>
+		    <scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>org.mockito</groupId>
+		    <artifactId>mockito-core</artifactId>
+		    <version>2.7.22</version>
+		    <scope>test</scope>
+		</dependency>
+		<dependency>
+		    <groupId>org.hsqldb</groupId>
+		    <artifactId>hsqldb</artifactId>
+		    <version>2.4.1</version>
+		    <scope>test</scope>
+		</dependency>
 	</dependencies>
 	<name>JDBC Persistence for Felix CM</name>
 </project>
