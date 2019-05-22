@@ -24,12 +24,15 @@ import org.apache.felix.cm.PersistenceManager;
 public class JdbcPersistenceManager	implements PersistenceManager
 {
 	private final DataSource dataSource;
-	private final String tableSettings;
 	private final String columnPid;
 	private final String columnProperty;
 	private final String columnValue;
 	private final Function<String, String> toInternalFormat = x -> x;
 	private final Function<String, String> toExternalFormat = x -> x;
+	private final String deleteQuery;
+	private final String insertQuery;
+	private final String selectQuery;
+	private final String selectPidsQuery; 
 	
 	public JdbcPersistenceManager(
 			final DataSource dataSource,
@@ -41,12 +44,28 @@ public class JdbcPersistenceManager	implements PersistenceManager
 			final Function<String, String> toExternalFormat*/)
 	{
 		this.dataSource = dataSource;
-		this.tableSettings = tableSettings;
 		this.columnPid = columnPid;
 		this.columnProperty = columnProperty;
 		this.columnValue = columnValue;
 		//this.toInternalFormat = toInternalFormat;
 		//this.toExternalFormat = toExternalFormat;
+		
+		deleteQuery = String.format(
+				"delete from %s where %s = ?", 
+				tableSettings, columnPid);
+		
+		insertQuery = String.format(
+				"insert into %s (%s, %s, %s) values (?, ?, ?)", 
+				tableSettings, columnPid, columnProperty, columnValue);
+		
+		selectQuery = String.format(
+				"select %s, %s from %s where %s = ?", 
+				columnProperty, columnValue, tableSettings, columnPid);
+		
+		selectPidsQuery = String.format(
+				"select distinct %s from %s", 
+				columnPid,
+				tableSettings);
 	}
 	
 	@Override
@@ -76,13 +95,7 @@ public class JdbcPersistenceManager	implements PersistenceManager
 		final Dictionary<String,Object> results = new Hashtable<>();
 		
 		try(Connection conn = dataSource.getConnection();
-			PreparedStatement stmt = conn.prepareStatement(
-				String.format(
-					"select %s, %s from %s where %s = ?", 
-					columnProperty, 
-					columnValue,
-					tableSettings, 
-					columnPid)))
+			PreparedStatement stmt = conn.prepareStatement(selectQuery))
 		{
 			stmt.setString(1, pid);
 			
@@ -152,11 +165,6 @@ public class JdbcPersistenceManager	implements PersistenceManager
 	{
 		pid = toInternalFormat.apply(pid);
 		
-		StringBuilder newDataQuery = new StringBuilder(
-				"select null as ").append(columnProperty)
-					.append(", ").append("null as ").append(columnValue)
-					.append(", ").append("null as ").append(columnPid);
-		
 		Enumeration keys = properties.keys();
 		
 		Map<String, String> propertiesCopy = new HashMap<>();
@@ -169,40 +177,45 @@ public class JdbcPersistenceManager	implements PersistenceManager
 			
 			Object value = properties.get(key);
 			
-			newDataQuery.append("\n union all select ?, ?, ?");
-			
 			propertiesCopy.put(Objects.toString(key), Objects.toString(value));
 		}
-		
-		StringBuilder mergeQuery = new StringBuilder(
-			"merge ").append(tableSettings).append(" as target\n")
-			.append("using (\n ").append(newDataQuery).append("\n) as source\n")
-			.append("on source.").append(columnPid).append(" = target.").append(columnPid)
-			.append(" and source.").append(columnProperty).append(" = target.").append(columnProperty).append("\n")
-			.append("when not matched by target and source.").append(columnPid).append(" is not null then insert values (source.").append(columnPid).append(", source.").append(columnProperty).append(", source.").append(columnValue).append(")\n")
-			.append("when not matched by source and target.").append(columnPid).append(" = ? then delete\n")
-			.append("when matched then update set target.").append(columnValue).append(" = source.").append(columnValue).append(';')
-			;
 			
-		int idx = 1;
-		
-		final String finalQuery = mergeQuery.toString();
-		
-		try(Connection conn = dataSource.getConnection();
-			PreparedStatement stmt = conn.prepareStatement(finalQuery))
+		try(Connection conn = dataSource.getConnection())
 		{
-			for(String key : propertiesCopy.keySet())
+			boolean originallyAutoCommit = conn.getAutoCommit();
+			
+			if(originallyAutoCommit) conn.setAutoCommit(false);
+			
+			try
 			{
-				String value = propertiesCopy.get(key);
+				try(PreparedStatement stmt = conn.prepareStatement(deleteQuery))
+				{
+					stmt.setString(1, pid);
+					stmt.executeUpdate();
+				}
 				
-				stmt.setString(idx++, key);
-				stmt.setString(idx++, value);
-				stmt.setString(idx++, pid);
+				try(PreparedStatement stmt = conn.prepareStatement(insertQuery))
+				{
+					for(String key : propertiesCopy.keySet())
+					{
+						int idx = 1;
+						String value = propertiesCopy.get(key);
+						
+						stmt.setString(idx++, pid);
+						stmt.setString(idx++, key);
+						stmt.setString(idx++, value);
+						stmt.addBatch();
+					}
+					
+					stmt.executeBatch();
+				}
+				
+				conn.commit();
 			}
-			
-			stmt.setString(idx++, pid);
-			
-			stmt.execute();
+			finally
+			{
+				if(originallyAutoCommit) conn.setAutoCommit(true);
+			}
 		}
 		catch(SQLException e)
 		{
@@ -216,11 +229,7 @@ public class JdbcPersistenceManager	implements PersistenceManager
 		pid = toInternalFormat.apply(pid);
 		
 		try(Connection conn = dataSource.getConnection();
-			PreparedStatement stmt = conn.prepareStatement(
-				String.format(
-					"delete from %s where %s = ?", 
-					tableSettings, 
-					columnPid)))
+			PreparedStatement stmt = conn.prepareStatement(deleteQuery))
 		{
 			stmt.setString(1, pid);
 			stmt.executeUpdate();
@@ -236,11 +245,7 @@ public class JdbcPersistenceManager	implements PersistenceManager
 		final Set<String> results = new TreeSet<>();
 		
 		try(Connection conn = dataSource.getConnection();
-			PreparedStatement stmt = conn.prepareStatement(
-				String.format(
-					"select distinct %s from %s", 
-					columnPid,
-					tableSettings));
+			PreparedStatement stmt = conn.prepareStatement(selectPidsQuery);
 			ResultSet rs = stmt.executeQuery())
 		{
 			while(rs.next())
