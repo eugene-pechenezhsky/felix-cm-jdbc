@@ -38,16 +38,6 @@
 		<argument value="${jdbc.columnNamePid}"/>
 		<argument value="${jdbc.columnNameProperty}"/>
 		<argument value="${jdbc.columnNameValue}"/>
-		<!-- <argument>
-			<bean class="com.greysphere.internal.cm.PrefixStripFunction">
-				<argument value="${supportedPidPrefix}"/>
-			</bean>
-		</argument>
-		<argument>
-			<bean class="com.greysphere.internal.cm.PrefixAddFunction">
-				<argument value="${supportedPidPrefix}"/>
-			</bean>
-		</argument> -->
 	</bean>
 	
 	<bean id="pidFilter" class="com.greysphere.internal.cm.ServicePidFilterFactory" factory-method="create">

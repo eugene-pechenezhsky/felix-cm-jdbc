@@ -27,28 +27,24 @@ public class JdbcPersistenceManager	implements PersistenceManager
 	private final String columnPid;
 	private final String columnProperty;
 	private final String columnValue;
-	private final Function<String, String> toInternalFormat = x -> x;
-	private final Function<String, String> toExternalFormat = x -> x;
 	private final String deleteQuery;
 	private final String insertQuery;
 	private final String selectQuery;
 	private final String selectPidsQuery; 
+	private Function<String, String> toInternalFormat = x -> x;
+	private Function<String, String> toExternalFormat = x -> x;
 	
 	public JdbcPersistenceManager(
 			final DataSource dataSource,
 			final String tableSettings,
 			final String columnPid,
 			final String columnProperty,
-			final String columnValue/*,
-			final Function<String, String> toInternalFormat,
-			final Function<String, String> toExternalFormat*/)
+			final String columnValue)
 	{
 		this.dataSource = dataSource;
 		this.columnPid = columnPid;
 		this.columnProperty = columnProperty;
 		this.columnValue = columnValue;
-		//this.toInternalFormat = toInternalFormat;
-		//this.toExternalFormat = toExternalFormat;
 		
 		deleteQuery = String.format(
 				"delete from %s where %s = ?", 
@@ -256,5 +252,29 @@ public class JdbcPersistenceManager	implements PersistenceManager
 		}
 		
 		return results;
+	}
+	
+	public Function<String, String> getToInternalFormat()
+	{
+		return toInternalFormat;
+	}
+
+	public void setToInternalFormat(Function<String, String> toInternalFormat)
+	{
+		this.toInternalFormat = Objects
+				.requireNonNull(toInternalFormat)
+				.andThen(Objects::requireNonNull);
+	}
+
+	public Function<String, String> getToExternalFormat()
+	{
+		return toExternalFormat;
+	}
+
+	public void setToExternalFormat(Function<String, String> toExternalFormat)
+	{
+		this.toExternalFormat = Objects
+				.requireNonNull(toExternalFormat)
+				.andThen(Objects::requireNonNull);
 	}
 }
