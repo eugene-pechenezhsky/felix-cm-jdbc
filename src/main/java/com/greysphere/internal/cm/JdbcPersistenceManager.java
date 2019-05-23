@@ -67,8 +67,6 @@ public class JdbcPersistenceManager	implements PersistenceManager
 	@Override
 	public boolean exists(String pid)
 	{
-		pid = toInternalFormat.apply(pid);
-		
 		Set<String> allPids;
 		
 		try
