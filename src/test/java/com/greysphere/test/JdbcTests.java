@@ -1,10 +1,12 @@
 package com.greysphere.test;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.Dictionary;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
@@ -64,6 +66,9 @@ public class JdbcTests
 			
 			conn.commit();
 		}
+		
+		jdbcPm.setToExternalFormat(x -> x);
+		jdbcPm.setToInternalFormat(x -> x);
 	}
 	
 	@Test
@@ -84,5 +89,44 @@ public class JdbcTests
 		jdbcPm.store(pid, new Hashtable(ImmutableMap.of("A", "1")));
 		
 		assertTrue(jdbcPm.exists(pid));
+	}
+	
+	@Test
+	public void canRewritePidForPersistence() throws Exception
+	{
+		String pid = "pid1";
+		
+		jdbcPm.setToInternalFormat(x -> x.replace("pid", ""));
+		jdbcPm.setToExternalFormat(x -> "pid" + x);
+		
+		jdbcPm.store(pid, new Hashtable(ImmutableMap.of("A", "1")));
+		
+		assertTrue(jdbcPm.exists(pid));
+	}
+	
+	@Test
+	public void canLoadDictionary() throws Exception
+	{
+		String pid = "pid1";
+		
+		jdbcPm.store(pid, new Hashtable(ImmutableMap.of("A", "1")));
+		
+		Dictionary<?,?> d = jdbcPm.load(pid);
+
+		assertEquals(d.get("A"), "1");
+	}
+	
+	@Test
+	public void canRemoveDictionary() throws Exception
+	{
+		String pid = "pid1";
+		
+		jdbcPm.store(pid, new Hashtable(ImmutableMap.of("A", "1")));
+		
+		assertTrue(jdbcPm.exists(pid));
+		
+		jdbcPm.delete(pid);
+
+		assertFalse(jdbcPm.exists(pid));
 	}
 }
