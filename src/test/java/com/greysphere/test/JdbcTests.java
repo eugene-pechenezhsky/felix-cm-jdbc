@@ -11,7 +11,6 @@ import java.util.Hashtable;
 import javax.sql.DataSource;
 
 import org.junit.After;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -23,7 +22,6 @@ import com.greysphere.internal.cm.JdbcPersistenceManager;
 @RunWith(MockitoJUnitRunner.class)
 public class JdbcTests
 {
-	JdbcPersistenceManager jdbcPm;
 	
 	static final String TABLE_NAME = "appSettings";
 	static final String PID_COLUMN = "pid";
@@ -31,9 +29,11 @@ public class JdbcTests
 	static final String PROP_VALUE_COLUMN = "propertyValue";
 	
 	static final DataSource ds = DbHelper.createDataSource();
+	static final JdbcPersistenceManager jdbcPm = new JdbcPersistenceManager(
+			ds, TABLE_NAME, PID_COLUMN, PROP_NAME_COLUMN, PROP_VALUE_COLUMN);;
 	
 	@BeforeClass
-	public static void initTable() throws Exception
+	public static void beforeAllTests() throws Exception
 	{
 		try(Connection conn = ds.getConnection();
 			Statement stmt = conn.createStatement())
@@ -54,14 +54,8 @@ public class JdbcTests
 		}
 	}
 	
-	@Before
-	public void init() throws Exception
-	{
-		jdbcPm = new JdbcPersistenceManager(ds, TABLE_NAME, PID_COLUMN, PROP_NAME_COLUMN, PROP_VALUE_COLUMN);
-	}
-	
 	@After
-	public void cleanup() throws Exception
+	public void afterEachTest() throws Exception
 	{
 		try(Connection conn = ds.getConnection();
 			Statement stmt = conn.createStatement())
