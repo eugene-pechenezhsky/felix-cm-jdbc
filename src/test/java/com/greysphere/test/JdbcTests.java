@@ -20,6 +20,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableMap;
 import com.greysphere.internal.cm.JdbcPersistenceManager;
+import com.greysphere.internal.cm.JdbcPersistenceManager.PidFormatter;
 
 @RunWith(MockitoJUnitRunner.class)
 public class JdbcTests
@@ -67,8 +68,7 @@ public class JdbcTests
 			conn.commit();
 		}
 		
-		jdbcPm.setToExternalFormat(x -> x);
-		jdbcPm.setToInternalFormat(x -> x);
+		jdbcPm.setPidFormatter(null);
 	}
 	
 	@Test
@@ -96,8 +96,20 @@ public class JdbcTests
 	{
 		String pid = "pid1";
 		
-		jdbcPm.setToInternalFormat(x -> x.replace("pid", ""));
-		jdbcPm.setToExternalFormat(x -> "pid" + x);
+		jdbcPm.setPidFormatter(new PidFormatter()
+		{
+			@Override
+			public String toInternal(String pid)
+			{
+				return pid.replace("pid", "");
+			}
+			
+			@Override
+			public String fromInternal(String pid)
+			{
+				return "pid" + pid;
+			}
+		});
 		
 		jdbcPm.store(pid, new Hashtable(ImmutableMap.of("A", "1")));
 		

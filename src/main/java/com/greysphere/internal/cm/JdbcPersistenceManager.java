@@ -14,7 +14,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
-import java.util.function.Function;
 
 import javax.sql.DataSource;
 
@@ -23,6 +22,12 @@ import org.apache.felix.cm.PersistenceManager;
 @SuppressWarnings("rawtypes")
 public class JdbcPersistenceManager	implements PersistenceManager
 {
+	public interface PidFormatter
+	{
+		String toInternal(String pid);
+		String fromInternal(String pid);
+	}
+	
 	private final DataSource dataSource;
 	private final String columnPid;
 	private final String columnProperty;
@@ -30,9 +35,23 @@ public class JdbcPersistenceManager	implements PersistenceManager
 	private final String deleteQuery;
 	private final String insertQuery;
 	private final String selectQuery;
-	private final String selectPidsQuery; 
-	private Function<String, String> toInternalFormat = x -> x;
-	private Function<String, String> toExternalFormat = x -> x;
+	private final String selectPidsQuery;
+	private final PidFormatter defaultPidFormatter = wrapWithValidation(new PidFormatter()
+	{
+		@Override
+		public String toInternal(String pid)
+		{
+			return pid;
+		}
+		
+		@Override
+		public String fromInternal(String pid)
+		{
+			return pid;
+		}
+	});
+	
+	private PidFormatter pidFormatter = defaultPidFormatter;
 	
 	public JdbcPersistenceManager(
 			final DataSource dataSource,
@@ -84,7 +103,7 @@ public class JdbcPersistenceManager	implements PersistenceManager
 	@Override
 	public Dictionary load(String pid) throws IOException
 	{
-		pid = toInternalFormat.apply(pid);
+		pid = pidFormatter.toInternal(pid);
 		
 		final Dictionary<String,Object> results = new Hashtable<>();
 		
@@ -157,7 +176,7 @@ public class JdbcPersistenceManager	implements PersistenceManager
 	@Override
 	public void store(String pid, Dictionary properties) throws IOException
 	{
-		pid = toInternalFormat.apply(pid);
+		pid = pidFormatter.toInternal(pid);
 		
 		Enumeration keys = properties.keys();
 		
@@ -220,7 +239,7 @@ public class JdbcPersistenceManager	implements PersistenceManager
 	@Override
 	public void delete(String pid) throws IOException
 	{
-		pid = toInternalFormat.apply(pid);
+		pid = pidFormatter.toInternal(pid);
 		
 		try(Connection conn = dataSource.getConnection();
 			PreparedStatement stmt = conn.prepareStatement(deleteQuery))
@@ -245,34 +264,39 @@ public class JdbcPersistenceManager	implements PersistenceManager
 			while(rs.next())
 			{
 				String rawPid = rs.getString(columnPid); 
-				results.add(toExternalFormat.apply(rawPid));
+				results.add(pidFormatter.fromInternal(rawPid));
 			}
 		}
 		
 		return results;
 	}
 	
-	public Function<String, String> getToInternalFormat()
+	private static PidFormatter wrapWithValidation(PidFormatter wrapped)
 	{
-		return toInternalFormat;
+		return new PidFormatter()
+		{
+			@Override
+			public String toInternal(String pid)
+			{
+				return Objects.requireNonNull(wrapped.toInternal(pid));
+			}
+			
+			@Override
+			public String fromInternal(String pid)
+			{
+				return Objects.requireNonNull(wrapped.fromInternal(pid));
+			}
+		};
 	}
 
-	public void setToInternalFormat(Function<String, String> toInternalFormat)
+	public PidFormatter getPidFormatter()
 	{
-		this.toInternalFormat = Objects
-				.requireNonNull(toInternalFormat)
-				.andThen(Objects::requireNonNull);
+		return pidFormatter == defaultPidFormatter ? null : pidFormatter;
 	}
 
-	public Function<String, String> getToExternalFormat()
+	public void setPidFormatter(PidFormatter pidFormatter)
 	{
-		return toExternalFormat;
-	}
-
-	public void setToExternalFormat(Function<String, String> toExternalFormat)
-	{
-		this.toExternalFormat = Objects
-				.requireNonNull(toExternalFormat)
-				.andThen(Objects::requireNonNull);
+		this.pidFormatter = pidFormatter == null ? defaultPidFormatter : 
+				wrapWithValidation(Objects.requireNonNull(pidFormatter));
 	}
 }
