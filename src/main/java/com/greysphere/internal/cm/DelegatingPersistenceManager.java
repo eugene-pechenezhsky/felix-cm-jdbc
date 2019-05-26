@@ -27,7 +27,7 @@ public class DelegatingPersistenceManager implements PersistenceManager
 	private final boolean persistToWrappedPm;
 	private final SyncMode syncMode;
 	private static final Set<String> ignoredPropertiesForPrimary = new HashSet<>(Arrays.asList(
-		"felix.fileinstall.filename",
+		Constants.FELIX_INSTALL_FILENAME,
 		Constants.SERVICE_PID));
 	
 	public DelegatingPersistenceManager(
