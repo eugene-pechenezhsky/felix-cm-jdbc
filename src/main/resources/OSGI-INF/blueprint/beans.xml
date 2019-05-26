@@ -13,7 +13,7 @@
 			<cm:property name="serviceRanking" value="2"/>
 			<cm:property name="pidFilter.type" value="REGEX"/>
 			<cm:property name="pidFilter.arg" value=".+"/>
-			<cm:property name="bootstrapMode" value="SYNC_FROM_WRAPPED"/>
+			<cm:property name="syncMode" value="FROM_WRAPPED"/>
 			<cm:property name="persistToWrappedPersistenceManager" value="true"/>
 			
 			<cm:property name="jdbc.datasourceFilter" value="(databaseName=)"/>
@@ -45,9 +45,9 @@
 		<argument value="${pidFilter.arg}"/>
 	</bean>
 	
-	<bean id="bootstrapMode" class="java.lang.Enum" factory-method="valueOf">
-		<argument value="com.greysphere.internal.cm.BootstrapMode" />
-		<argument value="${bootstrapMode}"/>
+	<bean id="syncMode" class="java.lang.Enum" factory-method="valueOf">
+		<argument value="com.greysphere.internal.cm.SyncMode" />
+		<argument value="${syncMode}"/>
 	</bean>
 	
 	<bean id="delegatingPersistenceManager" class="com.greysphere.internal.cm.DelegatingPersistenceManager" 
@@ -56,7 +56,7 @@
 		<argument ref="wrappedPersistenceManager"/>
 		<!-- <argument ref="pidFilter"/> -->
 		<argument value="${persistToWrappedPersistenceManager}"/>
-		<argument ref="bootstrapMode"/>
+		<argument ref="syncMode"/>
 	</bean>
 	
 	<service id="persistenceManagerService" ref="delegatingPersistenceManager" 

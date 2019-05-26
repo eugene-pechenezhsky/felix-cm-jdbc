@@ -18,7 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import com.google.common.collect.ImmutableMap;
-import com.greysphere.internal.cm.BootstrapMode;
+import com.greysphere.internal.cm.SyncMode;
 import com.greysphere.internal.cm.Constants;
 import com.greysphere.internal.cm.DelegatingPersistenceManager;
 
@@ -44,7 +44,7 @@ public class WrapperTests
 				pmWrapped, 
 				x -> true, 
 				true, 
-				BootstrapMode.SYNC_FROM_WRAPPED);
+				SyncMode.FROM_WRAPPED);
 	}
 	
 	@Test

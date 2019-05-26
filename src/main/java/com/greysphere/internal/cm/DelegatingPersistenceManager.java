@@ -25,7 +25,7 @@ public class DelegatingPersistenceManager implements PersistenceManager
 	private final PersistenceManager pmWrapped;
 	private final Predicate<String> supportedPidPredicate;
 	private final boolean persistToWrappedPm;
-	private final BootstrapMode bootstrapMode;
+	private final SyncMode syncMode;
 	private static final Set<String> ignoredPropertiesForPrimary = new HashSet<>(Arrays.asList(
 		"felix.fileinstall.filename",
 		Constants.SERVICE_PID));
@@ -35,18 +35,18 @@ public class DelegatingPersistenceManager implements PersistenceManager
 			final PersistenceManager pmWrapped,
 			final Predicate<String> supportedPidPredicate,
 			final boolean persistToWrappedPm,
-			final BootstrapMode bootstrapMode)
+			final SyncMode syncMode)
 	{
 		this.pmPrimary = Objects.requireNonNull(pmPrimary);
 		this.pmWrapped = Objects.requireNonNull(pmWrapped);
 		this.supportedPidPredicate = Objects.requireNonNull(supportedPidPredicate);
-		this.bootstrapMode = Objects.requireNonNull(bootstrapMode);
+		this.syncMode = Objects.requireNonNull(syncMode);
 		this.persistToWrappedPm = persistToWrappedPm;
 		
 		log.info(
-			"Initialized: persistToWrappedPm={}; bootstrapMode={}",
+			"Initialized: persistToWrappedPm={}; syncMode={}",
 			persistToWrappedPm,
-			bootstrapMode); 
+			syncMode); 
 	}
 
 	@Override
@@ -120,13 +120,13 @@ public class DelegatingPersistenceManager implements PersistenceManager
 	
 	public void init()
 	{
-		switch(bootstrapMode)
+		switch(syncMode)
 		{
-			case SYNC_FROM_WRAPPED:
-				bootstrap(pmWrapped, pmPrimary, supportedPidPredicate);
+			case FROM_WRAPPED:
+				copyData(pmWrapped, pmPrimary, supportedPidPredicate);
 				break;
-			case SYNC_TO_WRAPPED:
-				bootstrap(pmPrimary, pmWrapped, supportedPidPredicate);
+			case TO_WRAPPED:
+				copyData(pmPrimary, pmWrapped, supportedPidPredicate);
 				break;
 			default: 
 				return;
@@ -134,12 +134,12 @@ public class DelegatingPersistenceManager implements PersistenceManager
 	}
 	
 	@SuppressWarnings("unchecked")
-	private static void bootstrap(
+	private static void copyData(
 			PersistenceManager source,
 			PersistenceManager destination,
 			Predicate<String> supportedPidPredicate)
 	{
-		log.info("Bootstrapping: copying configs from {} to {}", source, destination);
+		log.info("copying configs from {} to {}", source, destination);
 		
 		int copiedCount = 0;
 		int failedCount = 0;
@@ -189,7 +189,7 @@ public class DelegatingPersistenceManager implements PersistenceManager
 		}
 		
 		log.info(
-			"Finished bootstrapping configs: {} copied, {} skipped, {} failed",
+			"Finished copying configs: {} copied, {} skipped, {} failed",
 			copiedCount,
 			skippedCount,
 			failedCount);
